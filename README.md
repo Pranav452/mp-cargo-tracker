@@ -42,3 +42,4 @@ uvicorn main:app --reload
 ```
 
 The application will be available at `http://localhost:8000`
+
