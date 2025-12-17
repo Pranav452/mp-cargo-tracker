@@ -3,14 +3,14 @@ from playwright.async_api import async_playwright
 from services.utils import STEALTH_ARGS
 
 # --- DRIVERS ---
-# ACTIVE
 from services.air.air_india import drive_air_india
-from services.air.china_airlines import drive_china_airlines # NEW
-from services.air.silk_way import drive_silk_way # NEW
-from services.air.af_klm import drive_af_klm # NEW
-
-# PLACEHOLDERS
+from services.air.china_airlines import drive_china_airlines
+from services.air.silk_way import drive_silk_way
+from services.air.af_klm import drive_af_klm
+from services.air.etihad import drive_etihad
 from services.air.fallback import drive_air_fallback
+
+# SEA DRIVERS (Placeholders/Active)
 from services.sea.hapag import drive_hapag
 from services.sea.cma import drive_cma
 from services.sea.fallback import drive_sea_fallback
@@ -19,11 +19,12 @@ async def master_scraper(tracking_number: str, carrier_type: str = "air", carrie
     clean = tracking_number.replace(" ", "").replace("-", "")
     prefix = clean[:3]
 
-    print(f"\n🚦 Processing: {tracking_number} | Type: {carrier_type} | Carrier: {carrier_name}")
+    print(f"\n🚦 Processing: {tracking_number} | Type: {carrier_type}")
 
     async with async_playwright() as p:
+        # REMOVED: The iPhone/Mobile logic. Back to standard Desktop for everyone.
         browser = await p.chromium.launch(headless=False, args=STEALTH_ARGS)
-        context = await browser.new_context()
+        context = await browser.new_context(viewport={'width': 1920, 'height': 1080})
         page = await context.new_page()
 
         try:
@@ -31,6 +32,7 @@ async def master_scraper(tracking_number: str, carrier_type: str = "air", carrie
 
             # --- SEA ROUTING ---
             if carrier_type == "sea":
+                # ... (Keep existing Sea logic) ...
                 carrier_lower = str(carrier_name).lower()
                 if "hapag" in carrier_lower:
                     raw_data = await drive_hapag(page, clean)
@@ -44,7 +46,9 @@ async def master_scraper(tracking_number: str, carrier_type: str = "air", carrie
                 if prefix == "098":
                     # THE ONLY ACTIVE DRIVER
                     raw_data = await drive_air_india(page, clean)
-                elif prefix == "297": # China Airlines
+                elif prefix == "607": # Etihad
+                    raw_data = await drive_etihad(page, tracking_number) # Pass FULL number (with dash if needed)
+                elif prefix == "297":
                     raw_data = await drive_china_airlines(page, clean)
                 elif prefix in ["501", "463"]: # Silk Way
                     raw_data = await drive_silk_way(page, clean)
