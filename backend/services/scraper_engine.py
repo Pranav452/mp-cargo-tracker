@@ -5,6 +5,7 @@ from services.utils import STEALTH_ARGS
 # --- DRIVERS ---
 # ACTIVE
 from services.air.air_india import drive_air_india
+from services.air.china_airlines import drive_china_airlines # NEW
 
 # PLACEHOLDERS
 from services.air.af_klm import drive_af_klm
@@ -42,6 +43,8 @@ async def master_scraper(tracking_number: str, carrier_type: str = "air", carrie
                 if prefix == "098":
                     # THE ONLY ACTIVE DRIVER
                     raw_data = await drive_air_india(page, clean)
+                elif prefix == "297": # China Airlines
+                    raw_data = await drive_china_airlines(page, clean)
                 elif prefix in ["057", "074"]:
                     raw_data = await drive_af_klm(page, clean)
                 else:
