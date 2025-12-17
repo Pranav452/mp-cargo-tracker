@@ -7,9 +7,9 @@ from services.utils import STEALTH_ARGS
 from services.air.air_india import drive_air_india
 from services.air.china_airlines import drive_china_airlines # NEW
 from services.air.silk_way import drive_silk_way # NEW
+from services.air.af_klm import drive_af_klm # NEW
 
 # PLACEHOLDERS
-from services.air.af_klm import drive_af_klm
 from services.air.fallback import drive_air_fallback
 from services.sea.hapag import drive_hapag
 from services.sea.cma import drive_cma
