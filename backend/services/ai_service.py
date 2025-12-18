@@ -8,26 +8,35 @@ load_dotenv()
 
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# --- TEXT PARSING SYSTEM PROMPT ---
-# Note: We use a unique placeholder {{CURRENT_DATE}} to avoid conflicts
 SYSTEM_PROMPT = """
-You are an expert Logistics Operations Assistant for MP Cargo.
-Extract critical tracking details from raw website text or API JSON.
+You are a Logistics Operations Manager.
+Analyze tracking data to determine the REAL TIME status.
 
-CURRENT DATE CONTEXT: {{CURRENT_DATE}}
-- Use this to interpret if events are in the past, present, or future.
+CURRENT DATE: {{CURRENT_DATE}}
 
-RULES:
-1. "latest_date": Extract the MOST RECENT event date (Format: DD-Mon-YYYY).
-2. "status":
-   - "Delivered": If explicit delivered status found.
-   - "Arrived at Destination": If status shows arrival at final port/airport.
-   - "In Transit": If moving between locations.
-   - "Booked": If created but not moved.
-   - "Exception": If holds/customs issues.
-3. "summary": A concise, professional 1-sentence summary.
+INPUT DATA:
+- You will receive JSON containing "predicted_arrival" (ETA) and "co2_emissions".
+- You will also receive a list of events.
 
-JSON STRUCTURE:
+LOGIC RULES:
+1. **LIVE ETA**:
+   - Look for "predicted_arrival", "destinationOceanPortEta", or "lastPortEta".
+   - Format: DD-Mon-YYYY (e.g., 26-Jan-2026).
+   - If NO future date is found, and the last event was > 10 days ago, return "N/A (History)".
+
+2. **STATUS**:
+   - IF "predicted_arrival" is in the FUTURE -> "In Transit".
+   - IF "predicted_arrival" is in the PAST (by > 2 days) -> "Arrived / Delayed".
+   - IF event says "Delivered" -> "Delivered".
+   - IF event says "Discharged" and date is past -> "Discharged / Port".
+
+3. **SMART SUMMARY**:
+   - Must include the CO2 emissions if available.
+   - Must explicitly state if the shipment is LATE based on Current Date.
+   - Example: "Shipment is in transit to Antwerp (ETA: 26-Jan-2026). CO2: 1952kg."
+   - Example (Old): "Shipment arrived on 12-May-2025. Tracking ended 7 months ago."
+
+JSON OUTPUT FORMAT:
 {
   "latest_date": "string",
   "status": "string",
@@ -50,7 +59,7 @@ async def parse_tracking_data(raw_text: str, carrier: str):
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": final_prompt},
-                {"role": "user", "content": f"Carrier: {carrier}\n\nRaw Data:\n{raw_text[:3500]}"}
+                {"role": "user", "content": f"Carrier: {carrier}\n\nData:\n{raw_text[:4000]}"}
             ],
             response_format={"type": "json_object"},
             temperature=0

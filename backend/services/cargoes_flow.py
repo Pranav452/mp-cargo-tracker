@@ -60,8 +60,24 @@ async def check_cargoes_flow(tracking_number: str, carrier_type: str):
             if response.status_code == 200:
                 data = response.json()
                 if isinstance(data, list) and len(data) > 0:
-                    print("   ✅ API Success: Data found!")
-                    return json.dumps(data, indent=2)
+                    shipment = data[0] # Get first match
+
+                    # --- SMART EXTRACTION ---
+                    # We extract specific fields to help the AI
+                    legs = shipment.get("shipmentLegs", {}).get("portToPort", {})
+
+                    extracted_info = {
+                        "carrier_status": shipment.get("status"),
+                        "latest_event": shipment.get("subStatus1"),
+                        "origin": legs.get("firstPort"),
+                        "destination": legs.get("lastPort"),
+                        "predicted_arrival": legs.get("destinationOceanPortEta") or legs.get("lastPortEta"),
+                        "co2_emissions": shipment.get("emissions", {}).get("co2e", {}).get("value", "N/A"),
+                        "full_raw_data": shipment # Keep raw for deep analysis
+                    }
+
+                    print(f"   ✅ API Success! ETA: {extracted_info['predicted_arrival']} | CO2: {extracted_info['co2_emissions']}")
+                    return json.dumps(extracted_info, indent=2)
                 else:
                     print("   🔸 API returned 200 but list is empty.")
                     return None

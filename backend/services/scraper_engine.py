@@ -17,6 +17,7 @@ from services.air.fallback import drive_air_fallback
 # SEA DRIVERS (Placeholders/Active)
 from services.sea.hapag import drive_hapag
 from services.sea.cma import drive_cma
+from services.sea.msc import drive_msc # <--- NEW IMPORT
 from services.sea.fallback import drive_sea_fallback
 
 async def master_scraper(tracking_number: str, carrier_type: str = "air", carrier_name: str = ""):
@@ -49,12 +50,14 @@ async def master_scraper(tracking_number: str, carrier_type: str = "air", carrie
 
             # --- SEA ROUTING ---
             if carrier_type == "sea":
-                # ... (Keep existing Sea logic) ...
                 carrier_lower = str(carrier_name).lower()
+
                 if "hapag" in carrier_lower:
                     raw_data = await drive_hapag(page, clean)
                 elif "cma" in carrier_lower:
                     raw_data = await drive_cma(page, clean)
+                elif "msc" in carrier_lower:  # <--- MSC Route
+                    raw_data = await drive_msc(page, clean)
                 else:
                     raw_data = await drive_sea_fallback(page, clean)
 
