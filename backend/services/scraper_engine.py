@@ -2,12 +2,16 @@ import asyncio
 from playwright.async_api import async_playwright
 from services.utils import STEALTH_ARGS
 
+# --- API SERVICE ---
+from services.cargoes_flow import check_cargoes_flow  # <--- NEW
+
 # --- DRIVERS ---
 from services.air.air_india import drive_air_india
 from services.air.china_airlines import drive_china_airlines
 from services.air.silk_way import drive_silk_way
 from services.air.af_klm import drive_af_klm
 from services.air.etihad import drive_etihad
+from services.air.saudia import drive_saudia
 from services.air.fallback import drive_air_fallback
 
 # SEA DRIVERS (Placeholders/Active)
@@ -20,6 +24,19 @@ async def master_scraper(tracking_number: str, carrier_type: str = "air", carrie
     prefix = clean[:3]
 
     print(f"\n🚦 Processing: {tracking_number} | Type: {carrier_type}")
+
+    # ============================================================
+    # TIER 1: CARGOES FLOW API (The Fast Lane)
+    # ============================================================
+    # We try API first. If it works, we skip Playwright entirely.
+    api_result = await check_cargoes_flow(tracking_number, carrier_type)
+    if api_result:
+        return f"Source: Cargoes Flow API\n{api_result}"
+
+    # ============================================================
+    # TIER 2: SCRAPING (The Fallback)
+    # ============================================================
+    print("   🐢 API didn't have data. Switching to Scraper...")
 
     async with async_playwright() as p:
         # REMOVED: The iPhone/Mobile logic. Back to standard Desktop for everyone.
@@ -54,6 +71,8 @@ async def master_scraper(tracking_number: str, carrier_type: str = "air", carrie
                     raw_data = await drive_silk_way(page, clean)
                 elif prefix in ["057", "074"]:
                     raw_data = await drive_af_klm(page, clean)
+                elif prefix == "065": # Saudia
+                    raw_data = await drive_saudia(page, clean)
                 else:
                     raw_data = await drive_air_fallback(page, clean)
 
